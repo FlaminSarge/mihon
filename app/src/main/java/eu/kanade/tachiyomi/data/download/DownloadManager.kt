@@ -340,8 +340,11 @@ class DownloadManager(
 
         if (oldFolder.name == newName) return
 
-        // just to be safe, don't allow downloads for this manga while renaming it
-        downloader.removeFromQueue(manga)
+        // just to be safe, pause downloads while renaming this manga
+        val wasRunning = downloader.isRunning
+        if (wasRunning) {
+            downloader.pause()
+        }
 
         val capitalizationChanged = oldFolder.name.equals(newName, ignoreCase = true)
         if (capitalizationChanged) {
@@ -356,6 +359,14 @@ class DownloadManager(
             cache.renameManga(manga, oldFolder, newTitle)
         } else {
             logcat(LogPriority.ERROR) { "Failed to rename manga download folder: ${oldFolder.name}" }
+        }
+
+        if (wasRunning) {
+            if (queueState.value.isEmpty()) {
+                downloader.stop()
+            } else if (queueState.value.isNotEmpty()) {
+                downloader.start()
+            }
         }
     }
 
